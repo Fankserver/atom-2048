@@ -1,13 +1,13 @@
-{View} = require 'atom'
+{View} = require 'space-pen'
 
 module.exports =
 class AchievementsView extends View
   @content: ->
-      @div tabindex: -1, class: 'achievements overlay from-top', =>
-        @img class: "inline-block", src: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png", width: '32px', height: '32px', outlet: "icon"
-        @div class: "achievements-message-body inline-block", =>
-          @div class: "block-tight text-smaller text-highlight", "You could have earned a new achievement!"
-          @div class: "block-tight text-smaller", "Install achievements package in atom to unlock achievement system"
+    @div tabindex: -1, class: 'achievements overlay from-top', =>
+      @img class: "inline-block", src: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png", width: '32px', height: '32px', outlet: "icon"
+      @div class: "achievements-message-body inline-block", =>
+        @div class: "block-tight text-smaller text-highlight", "You could have earned a new achievement!"
+        @div class: "block-tight text-smaller", "Install achievements package in atom to unlock achievement system"
 
   initialize: (serializeState) ->
 
@@ -23,5 +23,5 @@ class AchievementsView extends View
     @destroy()
 
   achieve: ->
-    atom.workspaceView.append(this)
-    setTimeout(@cleanup, 5000)
+    atom.views.getView(atom.workspace).appendChild(@element)
+    setTimeout @cleanup, 5000

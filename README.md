@@ -1,10 +1,7 @@
-# atom-2048 package
+# 2048 for Atom
 Playing the interesting 2048 game right inside atom.
 
 ![2048-in-atom](https://raw.github.com/void-main/atom-2048/master/2048-in-atom.gif)
-
-## Installation
-You can install `atom-2048` either use the Atom package manager, which can be found in the Settings view, or run `apm install atom-2048` from the command line.
 
 ## How to play
 ### The normal way
@@ -36,3 +33,4 @@ NOTE: to get achievements, you have to install [achievements package](https://at
 
 ## Credits
 Credit goes to the fantastic [2048](https://github.com/gabrielecirulli/2048) game and the [original version 1024](https://play.google.com/store/apps/details?id=com.veewo.a1024).
+Special thanks to https://github.com/void-main for the initial creation of this package.

@@ -1,4 +1,5 @@
-{View} = require 'atom'
+{CompositeDisposable} = require 'atom'
+{View} = require 'space-pen'
 AchievementsView = require './achievements-view'
 
 Tile = (position, value) ->
@@ -703,19 +704,22 @@ class Atom2048View extends View
 
   initialize: (serializeState) ->
     @bossMode = false
-    atom.workspaceView.command "atom-2048:toggle", => @toggle()
 
-    atom.workspaceView.command "atom-2048:bossComing", (e) =>
+    @subscriptions = new CompositeDisposable
+
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-2048:toggle', => @toggle()
+
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-2048:bossComing', (e) =>
       if @hasParent()
         @bossComing()
       else
         e.abortKeyBinding()
 
-    atom.workspaceView.command "atom-2048:bossAway", => @bossAway()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-2048:bossAway', => @bossAway()
 
-    atom.on "atom2048:unlock", @achieve
-    atom.on "tileChanged", @tileUpdated
-    atom.on "scoreChanged", @scoreUpdated
+    # atom.on "atom2048:unlock", @achieve
+    # atom.on "tileChanged", @tileUpdated
+    # atom.on "scoreChanged", @scoreUpdated
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
@@ -815,13 +819,13 @@ class Atom2048View extends View
       @detach()
     else
       window.requestAnimationFrame ->
-        new GameManager(4, KeyboardInputManager, HTMLActuator, LocalScoreManager)
-      atom.workspaceView.append(this)
+        # new GameManager(4, KeyboardInputManager, HTMLActuator, LocalScoreManager)
+      atom.views.getView(atom.workspace).appendChild(@element)
 
-      atom.emit "atom2048:unlock",
-        name: "Hello, adventurer!"
-        requirement: "Launch 2048 game in atom"
-        category: "Game Play"
-        package: "atom-2048"
-        points: 100
-        iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
+    #   atom.emit "atom2048:unlock",
+    #     name: "Hello, adventurer!"
+    #     requirement: "Launch 2048 game in atom"
+    #     category: "Game Play"
+    #     package: "atom-2048"
+    #     points: 100
+    #     iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
