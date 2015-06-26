@@ -1,19 +1,11 @@
 {CompositeDisposable} = require 'atom'
-{View} = require 'space-pen'
+{Emitter} = require 'event-kit'
+{$, $$, View} = require 'space-pen'
 AchievementsView = require './achievements-view'
+Grid = require './grid'
+Tile = require './tile'
 
-Tile = (position, value) ->
-  @x = position.x
-  @y = position.y
-  @value = value or 2
-  @previousPosition = null
-  @mergedFrom = null # Tracks tiles that merged together
-  return
-Grid = (size) ->
-  @size = size
-  @cells = []
-  @build()
-  return
+emitter = new Emitter
 
 # Build a grid of the specified size
 
@@ -111,84 +103,6 @@ GameManager = (size, InputManager, Actuator, ScoreManager) ->
       return
   return
 )()
-Tile::savePosition = ->
-  @previousPosition =
-    x: @x
-    y: @y
-
-  return
-
-Tile::updatePosition = (position) ->
-  @x = position.x
-  @y = position.y
-  return
-
-Grid::build = ->
-  x = 0
-
-  while x < @size
-    row = @cells[x] = []
-    y = 0
-
-    while y < @size
-      row.push null
-      y++
-    x++
-  return
-
-Grid::randomAvailableCell = ->
-  cells = @availableCells()
-  cells[Math.floor(Math.random() * cells.length)]  if cells.length
-
-Grid::availableCells = ->
-  cells = []
-  @eachCell (x, y, tile) ->
-    unless tile
-      cells.push
-        x: x
-        y: y
-
-    return
-
-  cells
-
-Grid::eachCell = (callback) ->
-  x = 0
-
-  while x < @size
-    y = 0
-
-    while y < @size
-      callback x, y, @cells[x][y]
-      y++
-    x++
-  return
-
-Grid::cellsAvailable = ->
-  !!@availableCells().length
-
-Grid::cellAvailable = (cell) ->
-  not @cellOccupied(cell)
-
-Grid::cellOccupied = (cell) ->
-  !!@cellContent(cell)
-
-Grid::cellContent = (cell) ->
-  if @withinBounds(cell)
-    @cells[cell.x][cell.y]
-  else
-    null
-
-Grid::insertTile = (tile) ->
-  @cells[tile.x][tile.y] = tile
-  return
-
-Grid::removeTile = (tile) ->
-  @cells[tile.x][tile.y] = null
-  return
-
-Grid::withinBounds = (position) ->
-  position.x >= 0 and position.x < @size and position.y >= 0 and position.y < @size
 
 keymap =
   75: 0
@@ -231,16 +145,16 @@ KeyboardInputManager::listener = (event) ->
 
 KeyboardInputManager::listen = ->
   self = this
-  document.addEventListener "keydown", listenerFunc
-  retry = document.querySelector(".retry-button")
-  retry.addEventListener "click", @restart.bind(this)
-  retry.addEventListener "touchend", @restart.bind(this)
-  keepPlaying = document.querySelector(".keep-playing-button")
-  keepPlaying.addEventListener "click", @keepPlaying.bind(this)
-  keepPlaying.addEventListener "touchend", @keepPlaying.bind(this)
+  atom.views.getView(atom.workspace).addEventListener "keydown", listenerFunc
+  # retry = document.querySelector(".retry-button")
+  # retry.addEventListener "click", @restart.bind(this)
+  # retry.addEventListener "touchend", @restart.bind(this)
+  # keepPlaying = document.querySelector(".keep-playing-button")
+  # keepPlaying.addEventListener "click", @keepPlaying.bind(this)
+  # keepPlaying.addEventListener "touchend", @keepPlaying.bind(this)
   touchStartClientX = undefined
   touchStartClientY = undefined
-  gameContainer = document.getElementsByClassName("game-container")[0]
+  gameContainer = atom.views.getView(atom.workspace).getElementsByClassName("game-container")[0]
   gameContainer.addEventListener "touchstart", (event) ->
     return  if event.touches.length > 1
     touchStartClientX = event.touches[0].clientX
@@ -264,7 +178,7 @@ KeyboardInputManager::listen = ->
   return
 
 KeyboardInputManager::stopListen = ->
-  document.removeEventListener "keydown", listenerFunc
+  atom.views.getView(atom.workspace).removeEventListener "keydown", listenerFunc
   return
 
 KeyboardInputManager::restart = (event) ->
@@ -538,7 +452,7 @@ GameManager::move = (direction) ->
         # Only one merger per row traversal?
         if next and next.value is tile.value and not next.mergedFrom
           merged = new Tile(positions.next, tile.value * 2)
-          atom.emit "tileChanged", value: merged.value
+          emitter.emit "tileChanged", value: merged.value
           merged.mergedFrom = [
             tile
             next
@@ -551,7 +465,7 @@ GameManager::move = (direction) ->
 
           # Update the score
           self.score += merged.value
-          atom.emit "scoreChanged", value: self.score
+          emitter.emit "scoreChanged", value: self.score
 
           # The mighty 2048 tile
           self.won = true  if merged.value is 2048
@@ -717,9 +631,9 @@ class Atom2048View extends View
 
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-2048:bossAway', => @bossAway()
 
-    # atom.on "atom2048:unlock", @achieve
-    # atom.on "tileChanged", @tileUpdated
-    # atom.on "scoreChanged", @scoreUpdated
+    # emitter.on "atom2048:unlock", @achieve
+    # emitter.on "tileChanged", @tileUpdated
+    # emitter.on "scoreChanged", @scoreUpdated
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
@@ -730,7 +644,7 @@ class Atom2048View extends View
 
   achieve: (event) ->
      if atom.packages.isPackageActive("achievements")
-       atom.emit "achievement:unlock",
+       emitter.emit "achievement:unlock",
          name: event.name
          requirement: event.requirement
          category: event.category
@@ -744,7 +658,7 @@ class Atom2048View extends View
   # process tile event
   tileUpdated: (event) =>
     if event.value is 2048
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "Beat the game!"
         requirement: "Congratulations adventurer, not everyone can do this!"
         category: "Game Play"
@@ -752,7 +666,7 @@ class Atom2048View extends View
         points: 1600
         iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
     if event.value is 1024
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "Almost there!"
         requirement: "You are half way to win the game!"
         category: "Game Play"
@@ -760,7 +674,7 @@ class Atom2048View extends View
         points: 800
         iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
     if event.value >= 128
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "Got " + event.value
         requirement: "First got " + event.value
         category: "Game Play"
@@ -771,7 +685,7 @@ class Atom2048View extends View
   # process score event
   scoreUpdated: (event) =>
     if event.value >= 50000
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "100K!"
         requirement: "YOU ARE MY GOD!!"
         category: "Game Play"
@@ -779,7 +693,7 @@ class Atom2048View extends View
         points: 4000
         iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
     if event.value >= 50000
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "50K!"
         requirement: "Are you kidding me??"
         category: "Game Play"
@@ -787,7 +701,7 @@ class Atom2048View extends View
         points: 2000
         iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
     if event.value >= 30000
-          atom.emit "atom2048:unlock",
+          emitter.emit "atom2048:unlock",
             name: "30K!"
             requirement: "Too high, too high, don't fall!"
             category: "Game Play"
@@ -795,7 +709,7 @@ class Atom2048View extends View
             points: 1000
             iconURL: "http://gabrielecirulli.github.io/2048/meta/apple-touch-icon.png"
     if event.value >= 10000
-      atom.emit "atom2048:unlock",
+      emitter.emit "atom2048:unlock",
         name: "10K!"
         requirement: "No way!"
         category: "Game Play"
@@ -818,11 +732,11 @@ class Atom2048View extends View
       KeyboardInputManager::stopListen()
       @detach()
     else
-      window.requestAnimationFrame ->
-        # new GameManager(4, KeyboardInputManager, HTMLActuator, LocalScoreManager)
       atom.views.getView(atom.workspace).appendChild(@element)
+      window.requestAnimationFrame ->
+        new GameManager(4, KeyboardInputManager, HTMLActuator, LocalScoreManager)
 
-    #   atom.emit "atom2048:unlock",
+    #   emitter.emit "atom2048:unlock",
     #     name: "Hello, adventurer!"
     #     requirement: "Launch 2048 game in atom"
     #     category: "Game Play"

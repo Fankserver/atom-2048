@@ -13,6 +13,7 @@
     "atom": ">0.50.0"
   },
   "dependencies": {
-    "space-pen": "^5.1.1"
+    "space-pen": "^5.1.1",
+    "event-kit": "^1.1.0"
   }
 }
